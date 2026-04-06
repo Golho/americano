@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Americano — Badminton Tournament</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script type="module" src="/src/main.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body x-data="tournamentApp">
+<div class="wrap">
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        AMERI<span>CANO</span>
+        <small>🏸 Badminton Tournament</small>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <nav class="tabs">
+          <button
+            class="tab-btn"
+            :class="{ active: currentTab === 'setup' }"
+            @click="currentTab = 'setup'">
+            Setup
+          </button>
+          <button
+            class="tab-btn"
+            :class="{ active: currentTab === 'schedule' }"
+            @click="currentTab = 'schedule'">
+            Schedule
+          </button>
+          <button
+            class="tab-btn"
+            :class="{ active: currentTab === 'statistics' }"
+            @click="currentTab = 'statistics'"
+            x-show="schedule.length > 0">
+            Statistics
+          </button>
+          <button
+            class="tab-btn"
+            :class="{ active: currentTab === 'leaderboard' }"
+            @click="currentTab = 'leaderboard'">
+            Leaderboard
+          </button>
+        </nav>
+        <button class="export-btn" @click="showTournamentManagerModal" id="loadTournamentBtn" style="font-size:12px;padding:7px 14px;color:var(--muted);">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 15v4c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-4M17 9l-5 5-5-5M12 12.8V2.5"/></svg>
+          Load
+        </button>
+        <button class="export-btn" @click="newTournament" id="newTournamentBtn" style="font-size:12px;padding:7px 14px;color:var(--muted);">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══ SETUP ══ -->
+  <section class="section" :class="{ active: currentTab === 'setup' }">
+    <div class="setup-grid">
+      <div class="card">
+        <h3>Courts</h3>
+        <div class="players-list">
+          <template x-for="(court, index) in courts" :key="index">
+            <div class="player-tag">
+              <span class="rank" x-text="index + 1"></span>
+              <span x-text="court"></span>
+              <button class="remove-player" @click="removeCourt(index)">✕</button>
+            </div>
+          </template>
+        </div>
+
+        <div class="add-player-row">
+          <input
+            type="text"
+            x-model="newCourtName"
+            @keydown.enter="addCourt"
+            placeholder="Court name/number…"
+            maxlength="20">
+          <button @click="addCourt">Add Court</button>
+        </div>
+
+        <div class="quick-fill">
+          <span style="font-size:12px;color:var(--muted);align-self:center;">Quick fill:</span>
+          <button class="quick-btn" @click="quickFillCourts(2)">2 courts</button>
+          <button class="quick-btn" @click="quickFillCourts(4)">4 courts</button>
+          <button class="quick-btn" @click="quickFillCourts(6)">6 courts</button>
+          <button class="quick-btn" @click="quickFillCourts(8)">8 courts</button>
+          <button class="quick-btn" @click="clearCourts">Clear</button>
+        </div>
+
+        <div
+          class="player-count"
+          :class="courtCountStatus.class"
+          x-text="courtCountStatus.text">
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Rounds</h3>
+        <div class="field-row">
+          <label>Number of rounds</label>
+          <div class="num-row">
+            <button class="num-btn" @click="rounds = Math.max(1, rounds - 1)">−</button>
+            <input type="number" x-model.number="rounds" min="1" max="50">
+            <button class="num-btn" @click="rounds = Math.min(50, rounds + 1)">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Tournament Info</h3>
+        <div class="field-row">
+          <label>Tournament name (optional)</label>
+          <input type="text" x-model="tournamentName" placeholder="e.g. Club Night #12">
+        </div>
+      </div>
+
+      <div class="card players-card">
+        <h3>Players</h3>
+        <div class="players-list">
+          <template x-for="(player, index) in players" :key="index">
+            <div class="player-tag">
+              <span class="rank" x-text="index + 1"></span>
+              <span x-text="player"></span>
+              <button class="remove-player" @click="removePlayer(index)">✕</button>
+            </div>
+          </template>
+        </div>
+
+        <div class="add-player-row">
+          <input
+            type="text"
+            x-model="newPlayerName"
+            @keydown.enter="addPlayer"
+            placeholder="Player name…"
+            maxlength="30">
+          <button @click="addPlayer">Add Player</button>
+        </div>
+
+        <div class="quick-fill">
+          <span style="font-size:12px;color:var(--muted);align-self:center;">Quick fill:</span>
+          <button class="quick-btn" @click="quickFillPlayers(4)">4 players</button>
+          <button class="quick-btn" @click="quickFillPlayers(8)">8 players</button>
+          <button class="quick-btn" @click="quickFillPlayers(12)">12 players</button>
+          <button class="quick-btn" @click="quickFillPlayers(16)">16 players</button>
+          <button class="quick-btn" @click="quickFillPlayers(24)">24 players</button>
+          <button class="quick-btn" @click="showCSVImport = !showCSVImport">Import CSV</button>
+          <button class="quick-btn" @click="clearPlayers">Clear</button>
+        </div>
+
+        <div x-show="showCSVImport" x-transition id="csvImportBox">
+          <textarea
+            x-model="csvInput"
+            placeholder="Paste player names (one per line or comma-separated)&#10;e.g.:&#10;Alice&#10;Bob&#10;Carol&#10;&#10;Or: Alice, Bob, Carol"></textarea>
+          <div class="button-row">
+            <button class="btn-import" @click="importCSV">Import Players</button>
+            <button class="btn-cancel" @click="showCSVImport = false">Cancel</button>
+          </div>
+        </div>
+
+        <div
+          class="player-count"
+          :class="playerCountStatus.class"
+          x-text="playerCountStatus.text">
+        </div>
+      </div>
+    </div>
+
+    <button
+      class="generate-btn"
+      @click="generateSchedule"
+      :disabled="players.length < 4 || courts.length < 1">
+      GENERATE TOURNAMENT SCHEDULE
+    </button>
+  </section>
+
+  <!-- ══ SCHEDULE ══ -->
+  <section class="section" :class="{ active: currentTab === 'schedule' }">
+    <div class="info-row" x-show="schedule.length > 0">
+      <div class="info-chip">🏸 <strong x-text="tournamentName || 'Americano Tournament'"></strong></div>
+      <div class="info-chip">Courts: <strong x-text="courts.length"></strong></div>
+      <div class="info-chip">Rounds: <strong x-text="rounds"></strong></div>
+      <div class="info-chip">Players: <strong x-text="players.length"></strong></div>
+    </div>
+
+    <template x-if="schedule.length > 0">
+      <div>
+        <!-- Round Navigation -->
+        <div class="round-nav">
+          <button
+            class="round-nav-btn"
+            @click="prevRound"
+            :disabled="currentRound === 0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Previous
+          </button>
+          <div class="round-nav-indicator">
+            <div class="round-nav-label" x-text="`Round ${currentRound + 1} of ${schedule.length}`"></div>
+            <div class="round-nav-dots">
+              <template x-for="(round, index) in schedule" :key="index">
+                <div
+                  class="round-dot"
+                  :class="{ active: index === currentRound }"
+                  @click="currentRound = index">
+                </div>
+              </template>
+            </div>
+          </div>
+          <button
+            class="round-nav-btn"
+            @click="nextRound"
+            :disabled="currentRound === schedule.length - 1">
+            Next
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+
+        <!-- Matches Grid -->
+        <div class="matches-grid-single">
+          <template x-for="(match, matchIndex) in currentRoundMatches" :key="matchIndex">
+            <div class="match-card" :class="`c${match.court % 6}`">
+              <div class="court-badge" x-text="`Court ${courts[match.court] || (match.court + 1)}`"></div>
+              <div class="match-teams">
+                <div class="team">
+                  <div class="team-player" x-text="players[match.t1[0]]"></div>
+                  <div class="team-player" x-text="players[match.t1[1]]"></div>
+                </div>
+                <div class="vs">VS</div>
+                <div class="team right">
+                  <div class="team-player" x-text="players[match.t2[0]]"></div>
+                  <div class="team-player" x-text="players[match.t2[1]]"></div>
+                </div>
+              </div>
+              <div class="score-row">
+                <input
+                  class="score-input"
+                  type="number"
+                  min="0"
+                  max="99"
+                  placeholder="—"
+                  x-model.number="getScore(currentRound, matchIndex).s1">
+                <span class="score-dash">:</span>
+                <input
+                  class="score-input"
+                  type="number"
+                  min="0"
+                  max="99"
+                  placeholder="—"
+                  x-model.number="getScore(currentRound, matchIndex).s2">
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Sitting Out -->
+        <div class="sitting-out" x-show="currentRoundSitting.length > 0">
+          <strong>Sitting out:</strong> <span x-text="currentRoundSitting.map(i => players[i]).join(', ')"></span>
+        </div>
+      </div>
+    </template>
+
+    <div class="notice" x-show="schedule.length === 0">
+      <strong>No schedule generated yet.</strong> Go to the Setup tab and generate a tournament schedule first.
+    </div>
+  </section>
+
+  <!-- ══ STATISTICS ══ -->
+  <section class="section" :class="{ active: currentTab === 'statistics' }">
+    <div class="lb-controls">
+      <span style="color:var(--text);font-weight:600;">Player Statistics</span>
+      <button class="export-btn" @click="copyStatisticsCSV">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy CSV
+      </button>
+    </div>
+
+    <div class="lb-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th @click="sortStatistics('player')" style="cursor:pointer;">
+              Player
+              <span x-show="statisticsSort.key === 'player'" x-text="statisticsSort.asc ? '▲' : '▼'"></span>
+            </th>
+            <th class="num" @click="sortStatistics('games')" style="cursor:pointer;">
+              Games
+              <span x-show="statisticsSort.key === 'games'" x-text="statisticsSort.asc ? '▲' : '▼'"></span>
+            </th>
+            <th class="num" @click="sortStatistics('uniquePartners')" style="cursor:pointer;">
+              Unique Partners
+              <span x-show="statisticsSort.key === 'uniquePartners'" x-text="statisticsSort.asc ? '▲' : '▼'"></span>
+            </th>
+            <th class="num" @click="sortStatistics('maxPartner')" style="cursor:pointer;">
+              Max w/ Same
+              <span x-show="statisticsSort.key === 'maxPartner'" x-text="statisticsSort.asc ? '▲' : '▼'"></span>
+            </th>
+            <th class="num" @click="sortStatistics('uniqueOpponents')" style="cursor:pointer;">
+              Unique Opponents
+              <span x-show="statisticsSort.key === 'uniqueOpponents'" x-text="statisticsSort.asc ? '▲' : '▼'"></span>
+            </th>
+            <th class="num" @click="sortStatistics('maxOpponent')" style="cursor:pointer;">
+              Max vs Same
+              <span x-show="statisticsSort.key === 'maxOpponent'" x-text="statisticsSort.asc ? '▲' : '▼'"></span>
+            </th>
+            <th class="num" @click="sortStatistics('sitOuts')" style="cursor:pointer;">
+              Sit-outs
+              <span x-show="statisticsSort.key === 'sitOuts'" x-text="statisticsSort.asc ? '▲' : '▼'"></span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="stat in sortedStatistics" :key="stat.player">
+            <tr>
+              <td class="name-cell" x-text="stat.player"></td>
+              <td class="num" x-text="stat.games"></td>
+              <td class="num" x-text="stat.uniquePartners"></td>
+              <td class="num" x-text="stat.maxPartner"></td>
+              <td class="num" x-text="stat.uniqueOpponents"></td>
+              <td class="num" x-text="stat.maxOpponent"></td>
+              <td class="num" x-text="stat.sitOuts"></td>
+            </tr>
+          </template>
+          <tr x-show="sortedStatistics.length === 0">
+            <td colspan="7" style="text-align:center;color:var(--muted);padding:32px">
+              Generate a tournament first
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ══ LEADERBOARD ══ -->
+  <section class="section" :class="{ active: currentTab === 'leaderboard' }">
+    <div class="lb-controls">
+      <button class="export-btn" @click="window.print()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Print / Export
+      </button>
+      <button class="export-btn" @click="copyLeaderboardCSV">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy CSV
+      </button>
+    </div>
+
+    <div class="lb-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Player</th>
+            <th class="num">Pts Won</th>
+            <th class="num">Pts Lost</th>
+            <th class="num">+/−</th>
+            <th class="num">Games</th>
+            <th class="num">Wins</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="(entry, index) in leaderboard" :key="entry.player">
+            <tr :class="entry.podiumClass">
+              <td class="rank-cell" :class="entry.rankClass" x-text="entry.rank"></td>
+              <td class="name-cell" x-text="entry.player"></td>
+              <td class="num" x-text="entry.ptsWon"></td>
+              <td class="num" x-text="entry.ptsLost"></td>
+              <td class="num">
+                <span class="delta" :class="entry.diffClass" x-text="entry.diffStr"></span>
+              </td>
+              <td class="num" x-text="entry.games"></td>
+              <td class="num" x-text="entry.wins"></td>
+            </tr>
+          </template>
+          <tr x-show="leaderboard.length === 0">
+            <td colspan="7" style="text-align:center;color:var(--muted);padding:32px">
+              Generate a tournament first
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<!-- Modals (moved outside main container) -->
+<div>
+  <!-- Confirm Modal -->
+  <div x-show="modal.show" x-transition class="modal-overlay confirm-modal" @click.self="modal.show = false">
+    <div class="modal-box">
+      <div class="modal-title" x-text="modal.title"></div>
+      <div class="modal-message" x-text="modal.message"></div>
+      <div class="modal-buttons">
+        <button class="modal-btn cancel" @click="modal.resolve(false); modal.show = false">Cancel</button>
+        <button
+          class="modal-btn confirm"
+          :class="{ danger: modal.isDanger }"
+          @click="modal.resolve(true); modal.show = false">
+          Confirm
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tournament Manager Modal -->
+  <div x-show="tournamentManagerOpen" x-transition class="modal-overlay tournament-manager" @click.self="tournamentManagerOpen = false">
+    <div class="modal-box" style="max-width: 600px; max-height: 80vh; overflow: auto;">
+      <div class="modal-title">Load Tournament</div>
+      <div class="modal-message">Select a tournament to load</div>
+
+      <div class="tournament-list" x-show="tournamentList.length > 0">
+        <template x-for="tournament in tournamentList" :key="tournament.id">
+          <div class="tournament-item" :class="{ current: tournament.id === currentTournamentId }">
+            <div class="tournament-info">
+              <div class="tournament-name" x-text="tournament.name"></div>
+              <div class="tournament-meta" x-text="`${tournament.playerCount} players · ${formatDate(tournament.lastModified)}`"></div>
+              <div class="tournament-current-badge" x-show="tournament.id === currentTournamentId">CURRENT</div>
+            </div>
+            <div class="tournament-actions">
+              <button
+                class="btn-load"
+                x-show="tournament.id !== currentTournamentId"
+                @click="loadTournamentById(tournament.id)">
+                Load
+              </button>
+              <button class="btn-delete" @click="deleteTournamentById(tournament.id)">Delete</button>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <div x-show="tournamentList.length === 0" style="text-align: center; color: var(--muted); padding: 32px;">
+        No saved tournaments found.
+      </div>
+
+      <button
+        class="modal-btn cancel"
+        @click="tournamentManagerOpen = false"
+        style="width: 100%; margin-top: 24px;">
+        Close
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div x-show="toast.show" x-transition class="toast" x-text="toast.message"></div>
+</div>
+
+</body>
+</html>
