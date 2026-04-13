@@ -119,12 +119,47 @@
 
       <div class="card players-card">
         <h3>Players</h3>
-        <div class="players-list">
+
+        <!-- Roster checklist (shown when a roster has been loaded via CSV) -->
+        <template x-if="roster.length > 0">
+          <div>
+            <div class="subsection-label">
+              Registered
+              <span class="subsection-count" x-text="`${roster.filter(r => r.attending).length} / ${roster.length} attending`"></span>
+            </div>
+            <div class="roster-list">
+              <template x-for="(member, index) in roster" :key="member.name">
+                <div class="roster-item" :class="{ 'not-attending': !member.attending }">
+                  <label class="roster-label">
+                    <input type="checkbox" :checked="member.attending" @change="toggleRosterAttendance(index)">
+                    <span x-text="member.name"></span>
+                  </label>
+                  <button class="remove-player" @click="removeFromRoster(index)" title="Remove from roster">✕</button>
+                </div>
+              </template>
+            </div>
+            <div class="subsection-label" x-show="players.some(p => !roster.some(r => r.name === p))" style="margin-top:4px;">Extra</div>
+          </div>
+        </template>
+
+        <!-- No-roster mode: show all players as before -->
+        <div class="players-list" x-show="roster.length === 0">
           <template x-for="(player, index) in players" :key="index">
             <div class="player-tag">
               <span class="rank" x-text="index + 1"></span>
               <span x-text="player"></span>
               <button class="remove-player" @click="removePlayer(index)">✕</button>
+            </div>
+          </template>
+        </div>
+
+        <!-- Roster mode: show only players not in roster (walk-ins) -->
+        <div class="players-list" x-show="roster.length > 0 && players.some(p => !roster.some(r => r.name === p))">
+          <template x-for="(player, index) in players.filter(p => !roster.some(r => r.name === p))" :key="player">
+            <div class="player-tag">
+              <span class="rank" x-text="players.indexOf(player) + 1"></span>
+              <span x-text="player"></span>
+              <button class="remove-player" @click="removeExtraPlayer(player)">✕</button>
             </div>
           </template>
         </div>
@@ -146,7 +181,7 @@
           <button class="quick-btn" @click="quickFillPlayers(12)">12 players</button>
           <button class="quick-btn" @click="quickFillPlayers(16)">16 players</button>
           <button class="quick-btn" @click="quickFillPlayers(24)">24 players</button>
-          <button class="quick-btn" @click="showCSVImport = !showCSVImport">Import CSV</button>
+          <button class="quick-btn" @click="showCSVImport = !showCSVImport">Load Roster</button>
           <button class="quick-btn" @click="clearPlayers">Clear</button>
         </div>
 
@@ -155,7 +190,7 @@
             x-model="csvInput"
             placeholder="Paste player names (one per line or comma-separated)&#10;e.g.:&#10;Alice&#10;Bob&#10;Carol&#10;&#10;Or: Alice, Bob, Carol"></textarea>
           <div class="button-row">
-            <button class="btn-import" @click="importCSV">Import Players</button>
+            <button class="btn-import" @click="importCSV">Load Roster</button>
             <button class="btn-cancel" @click="showCSVImport = false">Cancel</button>
           </div>
         </div>

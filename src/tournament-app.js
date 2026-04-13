@@ -21,6 +21,7 @@ export const tournamentApp = {
   tournamentName: '',
   players: [],
   newPlayerName: '',
+  roster: [], // [{ name: string, attending: boolean }] — predefined player list
   showCSVImport: false,
   csvInput: '',
 
@@ -297,10 +298,24 @@ export const tournamentApp = {
 
   addPlayer() {
     const name = this.newPlayerName.trim();
-    if (name && !this.players.includes(name)) {
+    if (!name) return;
+
+    // If name matches a roster member, mark them as attending
+    const rosterIdx = this.roster.findIndex(r => r.name === name);
+    if (rosterIdx !== -1) {
+      if (!this.roster[rosterIdx].attending) {
+        this.toggleRosterAttendance(rosterIdx);
+      }
+      this.newPlayerName = '';
+      return;
+    }
+
+    if (!this.players.includes(name)) {
       this.players.push(name);
       this.newPlayerName = '';
       this.autoSave();
+    } else {
+      this.newPlayerName = '';
     }
   },
 
@@ -309,13 +324,40 @@ export const tournamentApp = {
     this.autoSave();
   },
 
+  removeExtraPlayer(name) {
+    this.players = this.players.filter(p => p !== name);
+    this.autoSave();
+  },
+
+  toggleRosterAttendance(index) {
+    const member = this.roster[index];
+    this.roster[index] = { ...member, attending: !member.attending };
+    this._syncPlayersFromRoster();
+    this.autoSave();
+  },
+
+  removeFromRoster(index) {
+    const name = this.roster[index].name;
+    this.roster.splice(index, 1);
+    this.players = this.players.filter(p => p !== name);
+    this.autoSave();
+  },
+
+  _syncPlayersFromRoster() {
+    const attending = this.roster.filter(r => r.attending).map(r => r.name);
+    const extras = this.players.filter(p => !this.roster.some(r => r.name === p));
+    this.players = [...attending, ...extras];
+  },
+
   quickFillPlayers(count) {
+    this.roster = [];
     this.players = Array.from({length: count}, (_, i) => 'Player ' + (i + 1));
     this.autoSave();
   },
 
   clearPlayers() {
     this.players = [];
+    this.roster = [];
     this.autoSave();
   },
 
@@ -332,21 +374,18 @@ export const tournamentApp = {
       return;
     }
 
-    let added = 0;
-    names.forEach(n => {
-      if (!this.players.includes(n)) {
-        this.players.push(n);
-        added++;
-      }
+    // Build roster preserving existing attendance state for returning members
+    this.roster = names.map(name => {
+      const existing = this.roster.find(r => r.name === name);
+      return { name, attending: existing ? existing.attending : true };
     });
+
+    this._syncPlayersFromRoster();
 
     this.showCSVImport = false;
     this.csvInput = '';
     this.autoSave();
-
-    if (added > 0) {
-      this.showToast(`✓ ${added} player${added>1?'s':''} imported`);
-    }
+    this.showToast(`✓ Roster loaded (${names.length} players)`);
   },
 
   // ─── SCHEDULE GENERATION ─────────────────────────────────
@@ -431,6 +470,7 @@ export const tournamentApp = {
     this.currentRound = 0;
     this.rounds = DEFAULT_ROUNDS;
     this.tournamentName = '';
+    this.roster = [];
     this.currentTab = 'setup';
   },
 
@@ -457,6 +497,7 @@ export const tournamentApp = {
     this.scores = state.scores || {};
     this.rounds = state.rounds || DEFAULT_ROUNDS;
     this.tournamentName = state.name || '';
+    this.roster = state.roster || [];
     // currentRound not loaded - start at 0
 
     this.tournamentManagerOpen = false;
@@ -560,7 +601,8 @@ export const tournamentApp = {
       schedule: this.schedule,
       scores: this.scores,
       rounds: this.rounds,
-      tournamentName: this.tournamentName
+      tournamentName: this.tournamentName,
+      roster: this.roster
       // Note: currentRound excluded - it's UI state, not tournament data
     };
 
@@ -590,6 +632,7 @@ export const tournamentApp = {
       this.scores = state.scores || {};
       this.rounds = state.rounds || DEFAULT_ROUNDS;
       this.tournamentName = state.name || '';
+      this.roster = state.roster || [];
       // currentRound stays at 0 (default) - it's UI state
 
       if (this.schedule.length > 0) {
@@ -641,6 +684,7 @@ export const tournamentApp = {
             this.scores = state.scores || {};
             this.rounds = state.rounds || DEFAULT_ROUNDS;
             this.tournamentName = state.name || '';
+            this.roster = state.roster || [];
           }
 
           this.currentTab = currentTab;
