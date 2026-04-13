@@ -5,7 +5,12 @@
       "Bash(npm test:*)",
       "Bash(npx playwright:*)",
       "Skill(playwright-cli)",
-      "Skill(playwright-cli:*)"
+      "Skill(playwright-cli:*)",
+      "Bash(npm run:*)",
+      "Bash(npx vite:*)",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__navigate_page",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__take_screenshot",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__list_console_messages"
     ]
   }
 }
