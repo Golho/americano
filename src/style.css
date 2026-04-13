@@ -833,3 +833,12 @@ tr.podium-3 td { background: rgba(168,162,158,0.03); }
   white-space: nowrap;
 }
 .toast.show { opacity: 1; }
+
+/* Build version */
+.build-version {
+  text-align: center;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 12px;
+  opacity: 0.5;
+}
