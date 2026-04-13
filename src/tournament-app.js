@@ -137,6 +137,12 @@ export const tournamentApp = {
       });
     });
 
+    // Compute per-player averages
+    Object.values(stats).forEach(s => {
+      s.avgPts = s.games > 0 ? s.ptsWon / s.games : 0;
+      s.avgDiff = s.games > 0 ? (s.ptsWon - s.ptsLost) / s.games : 0;
+    });
+
     const sorted = this.players.slice().sort((a, b) => {
       const da = stats[a];
       const db = stats[b];
@@ -144,10 +150,8 @@ export const tournamentApp = {
       if (!da) return 1;
       if (!db) return -1;
 
-      if (db.ptsWon !== da.ptsWon) return db.ptsWon - da.ptsWon;
-      const diffA = da.ptsWon - da.ptsLost;
-      const diffB = db.ptsWon - db.ptsLost;
-      if (diffB !== diffA) return diffB - diffA;
+      if (db.avgPts !== da.avgPts) return db.avgPts - da.avgPts;
+      if (db.avgDiff !== da.avgDiff) return db.avgDiff - da.avgDiff;
       return db.wins - da.wins;
     });
 
@@ -161,8 +165,8 @@ export const tournamentApp = {
       if (!s) return null;
 
       if (previousStats &&
-          s.ptsWon === previousStats.ptsWon &&
-          (s.ptsWon - s.ptsLost) === (previousStats.ptsWon - previousStats.ptsLost) &&
+          s.avgPts === previousStats.avgPts &&
+          s.avgDiff === previousStats.avgDiff &&
           s.wins === previousStats.wins) {
         // Tied
       } else {
@@ -171,10 +175,12 @@ export const tournamentApp = {
 
       previousStats = s;
       const diff = s.ptsWon - s.ptsLost;
+      const avgPts = parseFloat(s.avgPts.toFixed(1));
 
       return {
         player,
         rank: currentRank,
+        avgPts,
         ptsWon: s.ptsWon,
         ptsLost: s.ptsLost,
         games: s.games,
@@ -364,10 +370,10 @@ export const tournamentApp = {
   importCSV() {
     if (!this.csvInput.trim()) return;
 
-    const names = this.csvInput
+    const names = [...new Set(this.csvInput
       .split(/[\n,]/)
       .map(s => s.trim())
-      .filter(s => s.length > 0 && s.length <= MAX_NAME_LENGTH);
+      .filter(s => s.length > 0 && s.length <= MAX_NAME_LENGTH))];
 
     if (names.length === 0) {
       alert('No valid player names found');
@@ -375,9 +381,10 @@ export const tournamentApp = {
     }
 
     // Build roster preserving existing attendance state for returning members
+    // New members default to not attending — they must be checked in manually
     this.roster = names.map(name => {
       const existing = this.roster.find(r => r.name === name);
-      return { name, attending: existing ? existing.attending : true };
+      return { name, attending: existing ? existing.attending : false };
     });
 
     this._syncPlayersFromRoster();
@@ -543,13 +550,14 @@ export const tournamentApp = {
   },
 
   copyLeaderboardCSV() {
-    const headers = ['Rank','Player','Pts Won','Pts Lost','+/-','Games','Wins'];
+    const headers = ['Rank','Player','Avg Pts','Pts Won','Pts Lost','+/-','Games','Wins'];
     const rows = [headers.join(',')];
 
     this.leaderboard.forEach(entry => {
       const row = [
         entry.rank,
         entry.player,
+        entry.avgPts,
         entry.ptsWon,
         entry.ptsLost,
         entry.diffStr,
